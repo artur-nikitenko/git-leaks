@@ -15,18 +15,24 @@ fi
 install_gitleaks() {
   echo "[gitleaks] Installing Gitleaks..."
 
-  # Linux or macOS: use install.sh
-  if [[ "$OSTYPE" == "linux-gnu"* ]] || [[ "$OSTYPE" == "darwin"* ]]; then
+  UNAME_OUT="$(uname -s)"
+
+  case "${UNAME_OUT}" in
+      Linux*)     OS=linux;;
+      Darwin*)    OS=darwin;;
+      CYGWIN*|MINGW*|MSYS*) OS=windows;;
+      *)          OS="unknown"
+  esac
+
+  if [ "$OS" = "linux" ] || [ "$OS" = "darwin" ]; then
     curl -s https://raw.githubusercontent.com/gitleaks/gitleaks/main/scripts/install.sh | bash
     export PATH=$PATH:$HOME/.gitleaks/bin
-
-  # Windows Git Bash or WSL
-  elif [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; then
-    echo "[gitleaks] Windows detected. Please install Gitleaks manually:"
+  elif [ "$OS" = "windows" ]; then
+    echo "[gitleaks] Windows detected. Please install manually:"
     echo "https://github.com/gitleaks/gitleaks/releases"
     exit 1
   else
-    echo "[gitleaks] Unknown OS: $OSTYPE. Please install manually."
+    echo "[gitleaks] Unknown OS detected: $UNAME_OUT"
     exit 1
   fi
 }
