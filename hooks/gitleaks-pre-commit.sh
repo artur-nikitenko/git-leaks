@@ -24,9 +24,17 @@ install_gitleaks() {
       *)          OS="unknown"
   esac
 
-  if [ "$OS" = "linux" ] || [ "$OS" = "darwin" ]; then
+  if [ "$OS" = "linux" ]; then
     curl -s https://raw.githubusercontent.com/gitleaks/gitleaks/main/scripts/install.sh | bash
-    export PATH=$PATH:$HOME/.gitleaks/bin
+
+  elif [ "$OS" = "darwin" ]; then
+    if command -v brew &> /dev/null; then
+      brew install gitleaks
+    else
+      echo "[gitleaks] Homebrew not found. Using fallback installer..."
+      curl -s https://raw.githubusercontent.com/gitleaks/gitleaks/main/scripts/install.sh | bash
+    fi
+
   elif [ "$OS" = "windows" ]; then
     echo "[gitleaks] Windows detected. Please install manually:"
     echo "https://github.com/gitleaks/gitleaks/releases"
