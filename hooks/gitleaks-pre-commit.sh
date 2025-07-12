@@ -68,10 +68,25 @@ if ! command -v gitleaks &> /dev/null; then
 fi
 
 # ========== SCAN ==========
-echo "[gitleaks] Scanning your codebase..."
+echo "[gitleaks] Scanning staged changes..."
 
-if ! gitleaks detect --source . --log-level error --no-banner --redact --exit-code 1; then
-  echo -e "\n[gitleaks] ❌ Secrets detected! Commit rejected."
+FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -z "$FILES" ]; then
+  echo "[gitleaks] No files staged for commit."
+  exit 0
+fi
+
+LEAKS_FOUND=0
+
+for FILE in $FILES; do
+  if [ -f "$FILE" ]; then
+    git show ":$FILE" | gitleaks detect --pipe --no-banner --redact --exit-code 1 > /dev/null 2>&1 || LEAKS_FOUND=1
+  fi
+done
+
+if [ "$LEAKS_FOUND" -eq 1 ]; then
+  echo -e "\n[gitleaks] ❌ Secrets detected in staged files! Commit rejected."
   echo "[gitleaks] Fix the issues or disable temporarily via:"
   echo "  git config gitleaks.enable false"
   exit 1
