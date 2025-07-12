@@ -47,16 +47,14 @@ install_gitleaks() {
     fi
   fi
 
+  FILENAME="gitleaks_${VERSION#v}_${OS}_${ARCH}"
+
   if [ "$OS" = "windows" ]; then
-    FILE="gitleaks_${VERSION}_${OS}_${ARCH}.exe"
-    URL="${BASE_URL}/${FILE}"
-    curl -sLo "$INSTALL_DIR/gitleaks.exe" "$URL"
+    curl -sLo "$INSTALL_DIR/gitleaks.exe" "${BASE_URL}/${FILENAME}.exe"
     chmod +x "$INSTALL_DIR/gitleaks.exe"
     GITLEAKS_BIN="$INSTALL_DIR/gitleaks.exe"
   else
-    FILE="gitleaks_${VERSION}_${OS}_${ARCH}.tar.gz"
-    URL="${BASE_URL}/${FILE}"
-    curl -sL "$URL" | tar -xz -C "$INSTALL_DIR"
+    curl -sL "${BASE_URL}/${FILENAME}.tar.gz" | tar -xz -C "$INSTALL_DIR"
     GITLEAKS_BIN="$INSTALL_DIR/gitleaks"
   fi
 
