@@ -2,10 +2,9 @@
 
 set -e
 
-# ========== SETTINGS ==========
+# ========== CONFIG CHECK ==========
 GITLEAKS_CONFIG_FLAG=$(git config --get gitleaks.enable)
 
-# ========== CHECK ENABLE FLAG ==========
 if [ "$GITLEAKS_CONFIG_FLAG" != "true" ]; then
   echo "[gitleaks] Skipped: enable it via 'git config gitleaks.enable true'"
   exit 0
@@ -15,42 +14,62 @@ fi
 install_gitleaks() {
   echo "[gitleaks] Installing Gitleaks..."
 
-  UNAME_OUT="$(uname -s)"
+  VERSION="v8.27.2"
+  BASE_URL="https://github.com/gitleaks/gitleaks/releases/download/${VERSION}"
 
-  case "${UNAME_OUT}" in
-      Linux*)     OS=linux;;
-      Darwin*)    OS=darwin;;
-      CYGWIN*|MINGW*|MSYS*) OS=windows;;
-      *)          OS="unknown"
+  UNAME_OS="$(uname -s)"
+  UNAME_ARCH="$(uname -m)"
+
+  case "$UNAME_OS" in
+    Linux) OS="linux";;
+    Darwin) OS="darwin";;
+    MINGW*|MSYS*|CYGWIN*|Windows_NT) OS="windows";;
+    *) echo "[gitleaks] Unsupported OS: $UNAME_OS"; exit 1;;
   esac
 
-  if [ "$OS" = "linux" ]; then
-    curl -s https://raw.githubusercontent.com/gitleaks/gitleaks/main/scripts/install.sh | bash
+  case "$UNAME_ARCH" in
+    x86_64|amd64) ARCH="x64";;
+    arm64|aarch64) ARCH="arm64";;
+    *) echo "[gitleaks] Unsupported architecture: $UNAME_ARCH"; exit 1;;
+  esac
 
-  elif [ "$OS" = "darwin" ]; then
+  INSTALL_DIR="$HOME/.gitleaks/bin"
+  mkdir -p "$INSTALL_DIR"
+
+  if [ "$OS" = "darwin" ]; then
     if command -v brew &> /dev/null; then
+      echo "[gitleaks] Installing via Homebrew..."
       brew install gitleaks
+      return
     else
-      echo "[gitleaks] Homebrew not found. Using fallback installer..."
-      curl -s https://raw.githubusercontent.com/gitleaks/gitleaks/main/scripts/install.sh | bash
+      echo "[gitleaks] Homebrew not found. Please install it: https://brew.sh/"
+      exit 1
     fi
-
-  elif [ "$OS" = "windows" ]; then
-    echo "[gitleaks] Windows detected. Please install manually:"
-    echo "https://github.com/gitleaks/gitleaks/releases"
-    exit 1
-  else
-    echo "[gitleaks] Unknown OS detected: $UNAME_OUT"
-    exit 1
   fi
+
+  if [ "$OS" = "windows" ]; then
+    FILE="gitleaks_${VERSION}_${OS}_${ARCH}.exe"
+    URL="${BASE_URL}/${FILE}"
+    curl -sLo "$INSTALL_DIR/gitleaks.exe" "$URL"
+    chmod +x "$INSTALL_DIR/gitleaks.exe"
+    GITLEAKS_BIN="$INSTALL_DIR/gitleaks.exe"
+  else
+    FILE="gitleaks_${VERSION}_${OS}_${ARCH}.tar.gz"
+    URL="${BASE_URL}/${FILE}"
+    curl -sL "$URL" | tar -xz -C "$INSTALL_DIR"
+    GITLEAKS_BIN="$INSTALL_DIR/gitleaks"
+  fi
+
+  export PATH="$INSTALL_DIR:$PATH"
+  echo "[gitleaks] Installed to $GITLEAKS_BIN"
 }
 
-# ========== CHECK IF GITLEAKS IS INSTALLED ==========
+# ========== INSTALL IF MISSING ==========
 if ! command -v gitleaks &> /dev/null; then
   install_gitleaks
 fi
 
-# ========== RUN SCAN ==========
+# ========== SCAN ==========
 echo "[gitleaks] Scanning your codebase..."
 
 if ! gitleaks detect --source . --log-level error --no-banner --redact --exit-code 1; then
