@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Check if hook is enabled
+if ! git config --get gitleaks.hook.enabled | grep -q "true"; then
+  echo "Gitleaks pre-commit hook is disabled. Skipping..."
+  exit 0
+fi
+
+# Run gitleaks
+if ! command -v gitleaks &> /dev/null; then
+  echo "❌ Gitleaks is not installed or not in PATH"
+  echo "ℹ️  Run ./install.sh to install it."
+  exit 1
+fi
+
+echo "🔍 Running gitleaks..."
+gitleaks detect --source . --report-path gitleaks-report.json
+
+if [ $? -ne 0 ]; then
+  echo "❌ Gitleaks found potential secrets. Commit aborted."
+  exit 1
+fi
+
+echo "✅ Gitleaks passed."
